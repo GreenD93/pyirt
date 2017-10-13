@@ -10,7 +10,8 @@ from pyirt.util import tools, clib
 import math
 import numpy as np
 
-
+tol = 1e-4
+delta = 1e-5
 
 class TestIrtFunctions(unittest.TestCase):
 
@@ -29,14 +30,11 @@ class TestIrtFunctions(unittest.TestCase):
         self.assertEqual(prob, 0.5)
         # test for c as limit situation
         prob = tools.irt_fnc(-99, 0.0, 1.0, 0.25)
-        self.assertTrue(abs(prob - 0.25) < 1e-5)
+        self.assertTrue(abs(prob - 0.25) < tol)
         prob = tools.irt_fnc(99, 0.0, 1.0, 0.25)
-        self.assertTrue(abs(prob - 1.0) < 1e-5)
+        self.assertTrue(abs(prob - 1.0) < tol)
 
     def test_log_likelihood(self):
-        # raise error
-        # with self.assertRaisesRegexp(ValueError,'Slope/Alpha should not be zero or negative.'):
-        #     clib.log_likelihood_2PL(0.0, 1.0, 0.0,-1.0,0.0)
 
         # the default model, log likelihood is log(0.5)
         ll = clib.log_likelihood_2PL(1.0, 0.0, 0.0, 1.0, 0.0)
@@ -73,7 +71,6 @@ class TestIrtFunctions(unittest.TestCase):
         self.assertTrue(abs(approx_sum - exact_sum) < 1e-10)
 
     def test_log_item_gradient(self):
-        delta = 0.00001
         y1 = 1.0
         y0 = 2.0
         theta = -2.0
@@ -87,8 +84,8 @@ class TestIrtFunctions(unittest.TestCase):
         # calculate
         calc_gradient = clib.log_likelihood_2PL_gradient(y1, y0, theta, alpha, beta)
 
-        self.assertTrue(abs(calc_gradient[0] - true_gradient_approx_beta) < 1e-4)
-        self.assertTrue(abs(calc_gradient[1] - true_gradient_approx_alpha) < 1e-4)
+        self.assertTrue(abs(calc_gradient[0] - true_gradient_approx_beta) < tol)
+        self.assertTrue(abs(calc_gradient[1] - true_gradient_approx_alpha) < tol)
 
         # simulate the gradient with c
         c = 0.25
@@ -99,48 +96,66 @@ class TestIrtFunctions(unittest.TestCase):
         # calculate
         calc_gradient = clib.log_likelihood_2PL_gradient(y1, y0, theta, alpha, beta, c)
 
-        self.assertTrue(abs(calc_gradient[0] - true_gradient_approx_beta) < 1e-4)
-        self.assertTrue(abs(calc_gradient[1] - true_gradient_approx_alpha) < 1e-4)
+        self.assertTrue(abs(calc_gradient[0] - true_gradient_approx_beta) < tol)
+        self.assertTrue(abs(calc_gradient[1] - true_gradient_approx_alpha) < tol)
 
-    def test_log_factor_gradient(self):
-        delta = 0.00001
-        y1 = 1.0
-        y0 = 2.0
-        theta = -2.0
-        alpha = 1.0
-        beta = 0.0
-        # simulate the gradient
-        true_gradient_approx_theta = (clib.log_likelihood_2PL(y1, y0, theta + delta, alpha, beta) -
-                                      clib.log_likelihood_2PL(y1, y0, theta, alpha, beta)) / delta
-        # calculate
-        calc_gradient = tools.log_likelihood_factor_gradient(y1, y0, theta, alpha, beta)
+#TODO: test for c
+class TestProbVect(unittest.TestCase):
+    def test_single(self):
+        param = np.array([0.5,-1.0])
+        theta = np.array([1,0.5])
+        self.assertTrue(tools.irt_vec(param, theta)==0.5)
+        
+        param = np.array([0.5,-1.0])
+        theta = np.array([1,1])
+        get = tools.irt_vec(param, theta)
+        want = 1/(1+np.exp(0.5))
+        self.assertTrue(abs(want-get)<tol)
+        
+    def test_composite(self):
+        param = np.array([0.5,-1.0,1.0])
+        theta = np.array([1,0.5,1])
+        get = tools.irt_vec(param, theta)
+        want = 1/(1+np.exp(-1))
+        self.assertTrue(abs(want-get)<tol)
 
-        self.assertTrue(abs(calc_gradient - true_gradient_approx_theta) < 1e-4)
+class TestLlkVec(unittest.TestCase):
+    def test_single(self):
+        param = np.array([0.5,-1.0])
+        theta = np.array([1,0.5])
+        get = tools.llk_vec(1,param, theta)
+        want = np.log(0.5) 
+        self.assertTrue(abs(want-get)<tol)
 
-        # simulate the gradient
-        c = 0.25
-        true_gradient_approx_theta = (clib.log_likelihood_2PL(y1, y0, theta + delta, alpha, beta, c) -
-                                      clib.log_likelihood_2PL(y1, y0, theta, alpha, beta, c)) / delta
-        # calculate
-        calc_gradient = tools.log_likelihood_factor_gradient(y1, y0, theta, alpha, beta, c)
+        param = np.array([0.5,-1.0])
+        theta = np.array([1,1])
+        get = tools.llk_vec(1,param, theta)
+        want = np.log(1/(1+np.exp(0.5)))
+        self.assertTrue(abs(want-get)<tol)
+        get = tools.llk_vec(0,param, theta)
+        want = np.log(1-1/(1+np.exp(0.5)))
+        self.assertTrue(abs(want-get)<tol)
+    
+    def test_composite(self):
 
-        self.assertTrue(abs(calc_gradient - true_gradient_approx_theta) < 1e-4)
+        param = np.array([0.5,-1.0,1.0])
+        theta = np.array([1,0.5,1])
+        get = tools.llk_vec(1,param, theta)
+        want = np.log(1/(1+np.exp(-1)))
+        self.assertTrue(abs(want-get)<tol)
+        get = tools.llk_vec(0,param, theta)
+        want = np.log(1-1/(1+np.exp(-1)))
+        self.assertTrue(abs(want-get)<tol)
 
-    def test_log_factor_hessian(self):
-        delta = 0.00001
-        y1 = 1.0
-        y0 = 2.0
-        theta = -2.0
-        alpha = 1.0
-        beta = 0.0
-        c = 0.25
-        # simulate the gradient
-        true_hessian_approx_theta = (tools.log_likelihood_factor_gradient(y1, y0, theta + delta, alpha, beta, c) -
-                                     tools.log_likelihood_factor_gradient(y1, y0, theta, alpha, beta, c)) / delta
-        # calculate
-        calc_hessian = tools.log_likelihood_factor_hessian(y1, y0, theta, alpha, beta, c)
-
-        self.assertTrue(abs(calc_hessian - true_hessian_approx_theta) < 1e-4)
+class TestGradVec(unittest.TestCase):
+    def test_single(self):
+        param = np.array([0.5,-1.0])
+        theta = np.array([1,1])
+        res = tools.llk_grad_vec(1, param, theta, "param")
+        print(res)
+        res = tools.llk_grad_vec(1, param, theta, "theta")
+        print(res)
+       
 
 class TestCutList(unittest.TestCase):
     def test_no_mod(self):

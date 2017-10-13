@@ -15,23 +15,33 @@ def log_likelihood_factor_gradient(y1, y0, theta, alpha, beta, c=0.0):
 
     return grad
 
+# vectorize
+def core_exp(param, theta):
+    return np.exp(-np.dot(param, theta))
 
-def log_likelihood_factor_hessian(y1, y0, theta, alpha, beta, c=0.0):
-    x = np.exp(beta + alpha * theta)
-    # hessian = - alpha**2*(y1+y0)*temp/(1+temp)**2
-    hessian = alpha ** 2 * x / (1 + x) ** 2 * (y1 * (1 - c) * (c - x ** 2) / (c + x) ** 2 - y0)
+def irt_vec(param, theta, c=0.0):
+    z = core_exp(param, theta) 
+    f = c+(1-c)/(1+z)
+    return f
 
-    return hessian
+def llk_vec(y, param, theta, c=0.0):
+    f = irt_vec(param, theta, c)
+    llk = y*np.log(f)+(1-y)*np.log(1-f)
+    return llk
 
+def llk_grad_vec(y, param, theta, grad_type, c=0.0):
+    # partial on core
+    z = core_exp(param, theta)
+    if grad_type=="param":
+        grad_core = -z*theta
+    else:
+        grad_core = -z*param
+    
+    prob = irt_vec(param, theta, c)
+    grad_prob = -(1-c)/(1+z**2)*grad_core
+    grad = (y/prob - (1-y)/(1-prob))*grad_prob
+    return grad 
 
-def log_likelihood_2PL_hessian(y1, y0, theta, alpha, beta, c=0.0):
-    hessian = np.zeros((2, 2))
-    x = np.exp(beta + alpha * theta)
-    base = x / (1 + x) ** 2 * (y1 * (1 - c) * (c - x ** 2) / (c + x) ** 2 - y0)
-
-    hessian = np.matrix([[1, theta], [theta, theta ** 2]]) * base
-
-    return hessian
 
 
 def logsum(logp):

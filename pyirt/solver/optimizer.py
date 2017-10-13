@@ -251,27 +251,6 @@ class irt_factor_optimizer(object):
 
         return res.x
 
-    def solve_param_hessian(self):
-        def target_fnc(x):
-            return self._likelihood(self.res_data, x, self.alpha_vec, self.beta_vec, self.c_vec)
-
-        def target_der(x):
-            return self._gradient(self.res_data, x, self.alpha_vec, self.beta_vec, self.c_vec)
-
-        def target_hess(x):
-            return self._hessian(self.res_data, x, self.alpha_vec, self.beta_vec, self.c_vec)
-
-        res = minimize(target_fnc, self.x0, method='Newton-CG',
-                       jac=target_der, hess=target_hess,
-                       options={'disp': False})
-        if not res.success:
-            if res.message == 'Desired error not necessarily achieved due to precision loss.':
-                # TODO:still returns a result. Something is wrong with the BFGS
-                # though
-                pass
-            else:
-                raise Exception('Algorithm failed, because ' + res.message)
-        return res.x
 
     def solve_param_scalar(self):
         def target_fnc(x):
