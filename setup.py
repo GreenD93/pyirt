@@ -1,5 +1,5 @@
-from setuptools import setup
-# from Cython.Build import cythonize
+from distutils.core import setup
+from Cython.Build import cythonize
 
 setup(
     name='pyirt',
@@ -7,6 +7,7 @@ setup(
     packages=['pyirt',
               'pyirt/solver',
               'pyirt/util', ],
+    ext_modules=cythonize('pyirt/util/*.pyx'),
     license='MIT',
     description='A python implementation of EM IRT, specializing in large and sparse data set',
     author='Junchen Feng',
@@ -23,9 +24,7 @@ setup(
                       'six',
                       'pymongo',
                       'tqdm'],
-
     package_data={'pyirt': ["*.pyx"]},
-
     classifiers=[
         'Intended Audience :: Developers',
         'Operating System :: OS Independent',

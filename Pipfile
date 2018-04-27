@@ -1,0 +1,21 @@
+[[source]]
+
+name = "pypi"
+verify_ssl = true
+url = "https://pypi.python.org/simple"
+
+
+[packages]
+
+tqdm = "*"
+numpy = "*"
+scipy = "*"
+cython = "*"
+six = "*"
+pymongo = "*"
+
+
+[dev-packages]
+
+ipdb = "*"
+nose = "*"
